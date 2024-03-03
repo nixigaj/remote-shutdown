@@ -1,0 +1,18 @@
+[package]
+name = "remote-stutdown"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4.5.1", features = ["derive"] }
+argon2 = "0.5.3"
+is-root = "0.1.3"
+system_shutdown = "4.0.1"
+
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
