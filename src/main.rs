@@ -110,6 +110,23 @@ async fn server(req: Request<Body>, token_hash: Arc<String>) -> Result<Response<
                 }
             }
 
+            if req.uri().eq("/gdm-restart") {
+                return match handle_gdm_restart().await {
+                    Ok(()) => {
+                        Ok(Response::builder()
+                            .status(StatusCode::OK)
+                            .body(Body::from("GDM restart successful"))
+                            .unwrap())
+                    }
+                    Err(err) => {
+                        Ok(Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::from(format!("GDM restart failed: {}", err)))
+                            .unwrap())
+                    }
+                }
+            }
+
             return Ok(Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(Body::from("Not found"))
@@ -204,8 +221,7 @@ async fn handle_lock() -> Result<(), String> {
     }
     
     let output = Command::new("loginctl")
-        .arg("lock-session")
-        .arg("-a")
+        .arg("lock-sessions")
         .output()
         .await
         .unwrap();
@@ -214,6 +230,32 @@ async fn handle_lock() -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("'loginctl' command error: (exit code {})", output.status))
+    }
+}
+
+async fn handle_gdm_restart() -> Result<(), String> {
+    match Command::new("systemctl")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn() {
+        Ok(_) => {},
+        Err(_) => {
+            return Err("Failed to find 'systemctl' command. \
+            Support not implemented for other platform".to_string())
+        },
+    }
+
+    let output = Command::new("systemctl")
+        .arg("restart")
+        .arg("gdm.service")
+        .output()
+        .await
+        .unwrap();
+
+    return if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!("'systemctl' command error: (exit code {})", output.status))
     }
 }
 
